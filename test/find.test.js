@@ -1,6 +1,8 @@
 var assert = require('assert');
 var typed = require('../typed-function');
 
+console.log('imported', typed);
+
 describe('find', function () {
 
   function a () {}

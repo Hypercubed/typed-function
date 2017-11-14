@@ -22,12 +22,16 @@
   "devDependencies": {
     "istanbul": "0.4.5",
     "mocha": "3.1.2",
-    "uglify-js": "2.4.15"
+    "uglify-js": "2.4.15",
+    "webpack": "^3.8.1"
   },
   "main": "./typed-function",
   "scripts": {
+    "build": "webpack && npm run minify",
+    "webpack": "webpack",
     "minify": "uglifyjs typed-function.js -o typed-function.min.js -c -m",
-    "test": "mocha test --recursive",
+    "mocha": "mocha test --recursive",
+    "test": "npm run build && npm run mocha",
     "coverage": "istanbul cover _mocha -- test --recursive; echo \"\nCoverage report is available at ./coverage/lcov-report/index.html\""
   },
   "engines": {
