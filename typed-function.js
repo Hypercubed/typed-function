@@ -940,7 +940,7 @@ function create() {
       code.push('function ' + _name + '(' + _args.join(', ') + ') {');
       code.push('  "use strict";');
       code.push("  var name = '" + _name + "';");
-      code.push(node.toCode(refs, '  ', typed));
+      code.push(node.toCode(refs, '  '));
       code.push('}');
   
       // generate body for the factory function
@@ -1441,7 +1441,7 @@ function Node(types, path, signature, childs, fallThrough) {
      * @param {string} prefix
      * @returns {string} Returns the code as string
      */
-Node.prototype.toCode = function(refs, prefix, typed) {
+Node.prototype.toCode = function(refs, prefix) {
   var self = this;
 
   // TODO: split this function in multiple functions, it's too large

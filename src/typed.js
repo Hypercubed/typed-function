@@ -587,7 +587,7 @@ export function create() {
       code.push('function ' + _name + '(' + _args.join(', ') + ') {');
       code.push('  "use strict";');
       code.push("  var name = '" + _name + "';");
-      code.push(node.toCode(refs, '  ', typed));
+      code.push(node.toCode(refs, '  '));
       code.push('}');
   
       // generate body for the factory function

@@ -21,7 +21,7 @@ export function Node(types, path, signature, childs, fallThrough) {
      * @param {string} prefix
      * @returns {string} Returns the code as string
      */
-Node.prototype.toCode = function(refs, prefix, typed) {
+Node.prototype.toCode = function(refs, prefix) {
   var self = this;
 
   // TODO: split this function in multiple functions, it's too large
