@@ -79,8 +79,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 "use strict";
 /* harmony export (immutable) */ __webpack_exports__["a"] = contains;
-/* harmony export (immutable) */ __webpack_exports__["b"] = getTypeTest;
-/* harmony export (immutable) */ __webpack_exports__["c"] = last;
+/* harmony export (immutable) */ __webpack_exports__["b"] = last;
 /**
      * Test whether an array contains some item
      * @param {Array} array
@@ -92,49 +91,14 @@ function contains(array, item) {
 }
 
 /**
-     * Get a type test function for a specific data type
-     * @param {string} name                   Name of a data type like 'number' or 'string'
-     * @returns {Function(obj: *) : boolean}  Returns a type testing function.
-     *                                        Throws an error for an unknown type.
-     */
-function getTypeTest(name, typed) {
-  var test;
-  for (var i = 0; i < typed.types.length; i++) {
-    var entry = typed.types[i];
-    if (entry.name === name) {
-      test = entry.test;
-      break;
-    }
-  }
-
-  if (!test) {
-    var hint;
-    for (i = 0; i < typed.types.length; i++) {
-      entry = typed.types[i];
-      if (entry.name.toLowerCase() == name.toLowerCase()) {
-        hint = entry.name;
-        break;
-      }
-    }
-
-    throw new Error(
-      'Unknown type "' +
-        name +
-        '"' +
-        (hint ? '. Did you mean "' + hint + '"?' : '')
-    );
-  }
-  return test;
-}
-
-  /**
      * Returns the last item in the array
      * @param {Array} array
      * @return {*} item
      */
-    function last(array) {
-      return array[array.length - 1];
-    }
+function last(array) {
+  return array[array.length - 1];
+}
+
 
 /***/ }),
 /* 1 */
@@ -342,20 +306,50 @@ Param.prototype.toString = function(toConversion) {
 /* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const typed = __webpack_require__(3).typed;
+/* WEBPACK VAR INJECTION */(function(global) {const typed = __webpack_require__(4).create();
 module.exports = typed;
+global.typed = typed;
 
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ }),
 /* 3 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__refs__ = __webpack_require__(4);
+/* harmony export (immutable) */ __webpack_exports__["create"] = create;
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__refs__ = __webpack_require__(5);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__param__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__signature__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__node__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__signature__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__node__ = __webpack_require__(7);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__utils__ = __webpack_require__(0);
 
 
@@ -366,462 +360,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 // factory function to create a new instance of typed-function
 // TODO: allow passing configuration, types, tests via the factory function
 function create() {
-
-  /**
-     * Retrieve the function name from a set of functions, and check
-     * whether the name of all functions match (if given)
-     * @param {Array.<function>} fns
-     */
-  function getName(fns) {
-    var name = '';
-
-    for (var i = 0; i < fns.length; i++) {
-      var fn = fns[i];
-
-      // merge function name when this is a typed function
-      if (fn.signatures && fn.name != '') {
-        if (name == '') {
-          name = fn.name;
-        } else if (name != fn.name) {
-          var err = new Error(
-            'Function names do not match (expected: ' +
-              name +
-              ', actual: ' +
-              fn.name +
-              ')'
-          );
-          err.data = {
-            actual: fn.name,
-            expected: name
-          };
-          throw err;
-        }
-      }
-    }
-
-    return name;
-  }
-
-  /**
-     * Create an ArgumentsError. Creates messages like:
-     *
-     *   Unexpected type of argument (expected: ..., actual: ..., index: ...)
-     *   Too few arguments (expected: ..., index: ...)
-     *   Too many arguments (expected: ..., actual: ...)
-     *
-     * @param {String} fn         Function name
-     * @param {number} argCount   Number of arguments
-     * @param {Number} index      Current argument index
-     * @param {*} actual          Current argument
-     * @param {string} [expected] An optional, comma separated string with
-     *                            expected types on given index
-     * @extends Error
-     */
-  function createError(fn, argCount, index, actual, expected) {
-    var actualType = getTypeOf(actual);
-    var _expected = expected ? expected.split(',') : null;
-    var _fn = fn || 'unnamed';
-    var anyType = _expected && Object(__WEBPACK_IMPORTED_MODULE_4__utils__["a" /* contains */])(_expected, 'any');
-    var message;
-    var data = {
-      fn: fn,
-      index: index,
-      actual: actual,
-      expected: _expected
-    };
-
-    if (_expected) {
-      if (argCount > index && !anyType) {
-        // unexpected type
-        message =
-          'Unexpected type of argument in function ' +
-          _fn +
-          ' (expected: ' +
-          _expected.join(' or ') +
-          ', actual: ' +
-          actualType +
-          ', index: ' +
-          index +
-          ')';
-      } else {
-        // too few arguments
-        message =
-          'Too few arguments in function ' +
-          _fn +
-          ' (expected: ' +
-          _expected.join(' or ') +
-          ', index: ' +
-          index +
-          ')';
-      }
-    } else {
-      // too many arguments
-      message =
-        'Too many arguments in function ' +
-        _fn +
-        ' (expected: ' +
-        index +
-        ', actual: ' +
-        argCount +
-        ')';
-    }
-
-    var err = new TypeError(message);
-    err.data = data;
-    return err;
-  }
-
-  /**
-     * Split all raw signatures into an array with expanded Signatures
-     * @param {Object.<string, Function>} rawSignatures
-     * @return {Signature[]} Returns an array with expanded signatures
-     */
-  function parseSignatures(rawSignatures) {
-    // FIXME: need to have deterministic ordering of signatures, do not create via object
-    var signature;
-    var keys = {};
-    var signatures = [];
-    var i;
-
-    for (var types in rawSignatures) {
-      if (rawSignatures.hasOwnProperty(types)) {
-        var fn = rawSignatures[types];
-        signature = new __WEBPACK_IMPORTED_MODULE_2__signature__["a" /* Signature */](types, fn);
-        signature.typed = typed;
-
-        if (signature.ignore()) {
-          continue;
-        }
-
-        var expanded = signature.expand();
-
-        for (i = 0; i < expanded.length; i++) {
-          var signature_i = expanded[i];
-          var key = signature_i.toString();
-          var existing = keys[key];
-          if (!existing) {
-            keys[key] = signature_i;
-          } else {
-            var cmp = __WEBPACK_IMPORTED_MODULE_2__signature__["a" /* Signature */].compare(signature_i, existing, typed);
-            if (cmp < 0) {
-              // override if sorted first
-              keys[key] = signature_i;
-            } else if (cmp === 0) {
-              throw new Error('Signature "' + key + '" is defined twice');
-            }
-            // else: just ignore
-          }
-        }
-      }
-    }
-
-    // convert from map to array
-    for (key in keys) {
-      if (keys.hasOwnProperty(key)) {
-        signatures.push(keys[key]);
-      }
-    }
-
-    // order the signatures
-    signatures.sort(function(a, b) {
-      return __WEBPACK_IMPORTED_MODULE_2__signature__["a" /* Signature */].compare(a, b, typed);
-    });
-
-    // filter redundant conversions from signatures with varArgs
-    // TODO: simplify this loop or move it to a separate function
-    for (i = 0; i < signatures.length; i++) {
-      signature = signatures[i];
-
-      if (signature.varArgs) {
-        var index = signature.params.length - 1;
-        var param = signature.params[index];
-
-        var t = 0;
-        while (t < param.types.length) {
-          if (param.conversions[t]) {
-            var type = param.types[t];
-
-            for (var j = 0; j < signatures.length; j++) {
-              var other = signatures[j];
-              var p = other.params[index];
-
-              if (
-                other !== signature &&
-                p &&
-                Object(__WEBPACK_IMPORTED_MODULE_4__utils__["a" /* contains */])(p.types, type) &&
-                !p.conversions[index]
-              ) {
-                // this (conversion) type already exists, remove it
-                param.types.splice(t, 1);
-                param.conversions.splice(t, 1);
-                t--;
-                break;
-              }
-            }
-          }
-          t++;
-        }
-      }
-    }
-
-    return signatures;
-  }
-
-  /**
-     * Filter all any type signatures
-     * @param {Signature[]} signatures
-     * @return {Signature[]} Returns only any type signatures
-     */
-  function filterAnyTypeSignatures(signatures) {
-    var filtered = [];
-
-    for (var i = 0; i < signatures.length; i++) {
-      if (signatures[i].anyType) {
-        filtered.push(signatures[i]);
-      }
-    }
-
-    return filtered;
-  }
-
-  /**
-     * create a map with normalized signatures as key and the function as value
-     * @param {Signature[]} signatures   An array with split signatures
-     * @return {Object.<string, Function>} Returns a map with normalized
-     *                                     signatures as key, and the function
-     *                                     as value.
-     */
-  function mapSignatures(signatures) {
-    var normalized = {};
-
-    for (var i = 0; i < signatures.length; i++) {
-      var signature = signatures[i];
-      if (signature.fn && !signature.hasConversions()) {
-        var params = signature.params.join(',');
-        normalized[params] = signature.fn;
-      }
-    }
-
-    return normalized;
-  }
-
-  /**
-     * Parse signatures recursively in a node tree.
-     * @param {Signature[]} signatures  Array with expanded signatures
-     * @param {Param[]} path            Traversed path of parameter types
-     * @param {Signature[]} anys
-     * @return {Node}                   Returns a node tree
-     */
-  function parseTree(signatures, path, anys) {
-    var i, signature;
-    var index = path.length;
-    var nodeSignature;
-
-    var filtered = [];
-    for (i = 0; i < signatures.length; i++) {
-      signature = signatures[i];
-
-      // filter the first signature with the correct number of params
-      if (signature.params.length === index && !nodeSignature) {
-        nodeSignature = signature;
-      }
-
-      if (signature.params[index] != undefined) {
-        filtered.push(signature);
-      }
-    }
-
-    // sort the filtered signatures by param
-    filtered.sort(function(a, b) {
-      return __WEBPACK_IMPORTED_MODULE_1__param__["a" /* Param */].compare(a.params[index], b.params[index], typed);
-    });
-
-    // recurse over the signatures
-    var entries = [];
-    for (i = 0; i < filtered.length; i++) {
-      signature = filtered[i];
-      // group signatures with the same param at current index
-      var param = signature.params[index];
-
-      // TODO: replace the next filter loop
-      var existing = entries.filter(function(entry) {
-        return entry.param.overlapping(param);
-      })[0];
-
-      //var existing;
-      //for (var j = 0; j < entries.length; j++) {
-      //  if (entries[j].param.overlapping(param)) {
-      //    existing = entries[j];
-      //    break;
-      //  }
-      //}
-
-      if (existing) {
-        if (existing.param.varArgs) {
-          throw new Error(
-            'Conflicting types "' + existing.param + '" and "' + param + '"'
-          );
-        }
-        existing.signatures.push(signature);
-      } else {
-        entries.push({
-          param: param,
-          signatures: [signature]
-        });
-      }
-    }
-
-    // find all any type signature that can still match our current path
-    var matchingAnys = [];
-    for (i = 0; i < anys.length; i++) {
-      if (anys[i].paramsStartWith(path)) {
-        matchingAnys.push(anys[i]);
-      }
-    }
-
-    // see if there are any type signatures that don't match any of the
-    // signatures that we have in our tree, i.e. we have alternative
-    // matching signature(s) outside of our current tree and we should
-    // fall through to them instead of throwing an exception
-    var fallThrough = false;
-    for (i = 0; i < matchingAnys.length; i++) {
-      if (!Object(__WEBPACK_IMPORTED_MODULE_4__utils__["a" /* contains */])(signatures, matchingAnys[i])) {
-        fallThrough = true;
-        break;
-      }
-    }
-
-    // parse the childs
-    var childs = new Array(entries.length);
-    for (i = 0; i < entries.length; i++) {
-      var entry = entries[i];
-      childs[i] = parseTree(
-        entry.signatures,
-        path.concat(entry.param),
-        matchingAnys
-      );
-    }
-
-    const node = new __WEBPACK_IMPORTED_MODULE_3__node__["a" /* Node */](path, nodeSignature, childs, fallThrough);
-    node.typed = typed;
-
-    return node;
-  }
-
-  /**
-     * Generate an array like ['arg0', 'arg1', 'arg2']
-     * @param {number} count Number of arguments to generate
-     * @returns {Array} Returns an array with argument names
-     */
-  function getArgs(count) {
-    // create an array with all argument names
-    var args = [];
-    for (var i = 0; i < count; i++) {
-      args[i] = 'arg' + i;
-    }
-
-    return args;
-  }
-
-  /**
-     * Compose a function from sub-functions each handling a single type signature.
-     * Signatures:
-     *   typed(signature: string, fn: function)
-     *   typed(name: string, signature: string, fn: function)
-     *   typed(signatures: Object.<string, function>)
-     *   typed(name: string, signatures: Object.<string, function>)
-     *
-     * @param {string | null} name
-     * @param {Object.<string, Function>} signatures
-     * @return {Function} Returns the typed function
-     * @private
-     */
-  function _typed(name, signatures) {
-    var refs = new __WEBPACK_IMPORTED_MODULE_0__refs__["a" /* Refs */]();
-
-    // parse signatures, expand them
-    var _signatures = parseSignatures(signatures);
-    if (_signatures.length == 0) {
-      throw new Error('No signatures provided');
-    }
-
-    // filter all any type signatures
-    var anys = filterAnyTypeSignatures(_signatures);
-
-    // parse signatures into a node tree
-    var node = parseTree(_signatures, [], anys);
-
-    //var util = require('util');
-    //console.log('ROOT');
-    //console.log(util.inspect(node, { depth: null }));
-
-    // generate code for the typed function
-    var code = [];
-    var _name = name || '';
-    var _args = getArgs(maxParams(_signatures));
-    code.push('function ' + _name + '(' + _args.join(', ') + ') {');
-    code.push('  "use strict";');
-    code.push("  var name = '" + _name + "';");
-    code.push(node.toCode(refs, '  ', false));
-    code.push('}');
-
-    // generate body for the factory function
-    var body = [refs.toCode(), 'return ' + code.join('\n')].join('\n');
-
-    // evaluate the JavaScript code and attach function references
-    var factory = new Function(refs.name, 'createError', body);
-    var fn = factory(refs, createError);
-
-    //console.log('FN\n' + fn.toString()); // TODO: cleanup
-
-    // attach the signatures with sub-functions to the constructed function
-    fn.signatures = mapSignatures(_signatures);
-
-    return fn;
-  }
-
-  /**
-     * Calculate the maximum number of parameters in givens signatures
-     * @param {Signature[]} signatures
-     * @returns {number} The maximum number of parameters
-     */
-  function maxParams(signatures) {
-    var max = 0;
-
-    for (var i = 0; i < signatures.length; i++) {
-      var len = signatures[i].params.length;
-      if (len > max) {
-        max = len;
-      }
-    }
-
-    return max;
-  }
-
-  /**
-     * Get the type of a value
-     * @param {*} x
-     * @returns {string} Returns a string with the type of value
-     */
-  function getTypeOf(x) {
-    var obj;
-
-    for (var i = 0; i < typed.types.length; i++) {
-      var entry = typed.types[i];
-
-      if (entry.name === 'Object') {
-        // Array and Date are also Object, so test for Object afterwards
-        obj = entry;
-      } else {
-        if (entry.test(x)) return entry.name;
-      }
-    }
-
-    // at last, test whether an object
-    if (obj && obj.test(x)) return obj.name;
-
-    return 'unknown';
-  }
 
   // data type tests
   var types = [
@@ -963,6 +501,507 @@ function create() {
     }
   });
 
+  // attach types and conversions to the final `typed` function
+  typed.config = config;
+  typed.types = types;
+  typed.conversions = conversions;
+  typed.ignore = ignore;
+  typed.create = create;
+  typed.find = find;
+  typed.convert = convert;
+  typed.addType = addType;
+  typed.addConversion = addConversion;
+
+  return typed;
+
+  // Functions
+
+  // add a type
+  function addType(type) {
+    if (
+      !type ||
+      typeof type.name !== 'string' ||
+      typeof type.test !== 'function'
+    ) {
+      throw new TypeError(
+        'Object with properties {name: string, test: function} expected'
+      );
+    }
+
+    typed.types.push(type);
+  };
+
+  // add a conversion
+  function addConversion(conversion) {
+    if (
+      !conversion ||
+      typeof conversion.from !== 'string' ||
+      typeof conversion.to !== 'string' ||
+      typeof conversion.convert !== 'function'
+    ) {
+      throw new TypeError(
+        'Object with properties {from: string, to: string, convert: function} expected'
+      );
+    }
+
+    typed.conversions.push(conversion);
+  };
+
+  /**
+     * Retrieve the function name from a set of functions, and check
+     * whether the name of all functions match (if given)
+     * @param {Array.<function>} fns
+     */
+    function getName(fns) {
+      var name = '';
+  
+      for (var i = 0; i < fns.length; i++) {
+        var fn = fns[i];
+  
+        // merge function name when this is a typed function
+        if (fn.signatures && fn.name != '') {
+          if (name == '') {
+            name = fn.name;
+          } else if (name != fn.name) {
+            var err = new Error(
+              'Function names do not match (expected: ' +
+                name +
+                ', actual: ' +
+                fn.name +
+                ')'
+            );
+            err.data = {
+              actual: fn.name,
+              expected: name
+            };
+            throw err;
+          }
+        }
+      }
+  
+      return name;
+    }
+  
+    /**
+       * Create an ArgumentsError. Creates messages like:
+       *
+       *   Unexpected type of argument (expected: ..., actual: ..., index: ...)
+       *   Too few arguments (expected: ..., index: ...)
+       *   Too many arguments (expected: ..., actual: ...)
+       *
+       * @param {String} fn         Function name
+       * @param {number} argCount   Number of arguments
+       * @param {Number} index      Current argument index
+       * @param {*} actual          Current argument
+       * @param {string} [expected] An optional, comma separated string with
+       *                            expected types on given index
+       * @extends Error
+       */
+    function createError(fn, argCount, index, actual, expected) {
+      var actualType = getTypeOf(actual);
+      var _expected = expected ? expected.split(',') : null;
+      var _fn = fn || 'unnamed';
+      var anyType = _expected && Object(__WEBPACK_IMPORTED_MODULE_4__utils__["a" /* contains */])(_expected, 'any');
+      var message;
+      var data = {
+        fn: fn,
+        index: index,
+        actual: actual,
+        expected: _expected
+      };
+  
+      if (_expected) {
+        if (argCount > index && !anyType) {
+          // unexpected type
+          message =
+            'Unexpected type of argument in function ' +
+            _fn +
+            ' (expected: ' +
+            _expected.join(' or ') +
+            ', actual: ' +
+            actualType +
+            ', index: ' +
+            index +
+            ')';
+        } else {
+          // too few arguments
+          message =
+            'Too few arguments in function ' +
+            _fn +
+            ' (expected: ' +
+            _expected.join(' or ') +
+            ', index: ' +
+            index +
+            ')';
+        }
+      } else {
+        // too many arguments
+        message =
+          'Too many arguments in function ' +
+          _fn +
+          ' (expected: ' +
+          index +
+          ', actual: ' +
+          argCount +
+          ')';
+      }
+  
+      var err = new TypeError(message);
+      err.data = data;
+      return err;
+    }
+  
+    /**
+       * Split all raw signatures into an array with expanded Signatures
+       * @param {Object.<string, Function>} rawSignatures
+       * @return {Signature[]} Returns an array with expanded signatures
+       */
+    function parseSignatures(rawSignatures) {
+      // FIXME: need to have deterministic ordering of signatures, do not create via object
+      var signature;
+      var keys = {};
+      var signatures = [];
+      var i;
+  
+      for (var types in rawSignatures) {
+        if (rawSignatures.hasOwnProperty(types)) {
+          var fn = rawSignatures[types];
+          signature = new __WEBPACK_IMPORTED_MODULE_2__signature__["a" /* Signature */](typed, types, fn);
+  
+          if (signature.ignore()) {
+            continue;
+          }
+  
+          var expanded = signature.expand();
+  
+          for (i = 0; i < expanded.length; i++) {
+            var signature_i = expanded[i];
+            var key = signature_i.toString();
+            var existing = keys[key];
+            if (!existing) {
+              keys[key] = signature_i;
+            } else {
+              var cmp = __WEBPACK_IMPORTED_MODULE_2__signature__["a" /* Signature */].compare(signature_i, existing, typed);
+              if (cmp < 0) {
+                // override if sorted first
+                keys[key] = signature_i;
+              } else if (cmp === 0) {
+                throw new Error('Signature "' + key + '" is defined twice');
+              }
+              // else: just ignore
+            }
+          }
+        }
+      }
+  
+      // convert from map to array
+      for (key in keys) {
+        if (keys.hasOwnProperty(key)) {
+          signatures.push(keys[key]);
+        }
+      }
+  
+      // order the signatures
+      signatures.sort(function(a, b) {
+        return __WEBPACK_IMPORTED_MODULE_2__signature__["a" /* Signature */].compare(a, b, typed);
+      });
+  
+      // filter redundant conversions from signatures with varArgs
+      // TODO: simplify this loop or move it to a separate function
+      for (i = 0; i < signatures.length; i++) {
+        signature = signatures[i];
+  
+        if (signature.varArgs) {
+          var index = signature.params.length - 1;
+          var param = signature.params[index];
+  
+          var t = 0;
+          while (t < param.types.length) {
+            if (param.conversions[t]) {
+              var type = param.types[t];
+  
+              for (var j = 0; j < signatures.length; j++) {
+                var other = signatures[j];
+                var p = other.params[index];
+  
+                if (
+                  other !== signature &&
+                  p &&
+                  Object(__WEBPACK_IMPORTED_MODULE_4__utils__["a" /* contains */])(p.types, type) &&
+                  !p.conversions[index]
+                ) {
+                  // this (conversion) type already exists, remove it
+                  param.types.splice(t, 1);
+                  param.conversions.splice(t, 1);
+                  t--;
+                  break;
+                }
+              }
+            }
+            t++;
+          }
+        }
+      }
+  
+      return signatures;
+    }
+  
+    /**
+       * Filter all any type signatures
+       * @param {Signature[]} signatures
+       * @return {Signature[]} Returns only any type signatures
+       */
+    function filterAnyTypeSignatures(signatures) {
+      var filtered = [];
+  
+      for (var i = 0; i < signatures.length; i++) {
+        if (signatures[i].anyType) {
+          filtered.push(signatures[i]);
+        }
+      }
+  
+      return filtered;
+    }
+  
+    /**
+       * create a map with normalized signatures as key and the function as value
+       * @param {Signature[]} signatures   An array with split signatures
+       * @return {Object.<string, Function>} Returns a map with normalized
+       *                                     signatures as key, and the function
+       *                                     as value.
+       */
+    function mapSignatures(signatures) {
+      var normalized = {};
+  
+      for (var i = 0; i < signatures.length; i++) {
+        var signature = signatures[i];
+        if (signature.fn && !signature.hasConversions()) {
+          var params = signature.params.join(',');
+          normalized[params] = signature.fn;
+        }
+      }
+  
+      return normalized;
+    }
+  
+    /**
+       * Parse signatures recursively in a node tree.
+       * @param {Signature[]} signatures  Array with expanded signatures
+       * @param {Param[]} path            Traversed path of parameter types
+       * @param {Signature[]} anys
+       * @return {Node}                   Returns a node tree
+       */
+    function parseTree(signatures, path, anys) {
+      var i, signature;
+      var index = path.length;
+      var nodeSignature;
+  
+      var filtered = [];
+      for (i = 0; i < signatures.length; i++) {
+        signature = signatures[i];
+  
+        // filter the first signature with the correct number of params
+        if (signature.params.length === index && !nodeSignature) {
+          nodeSignature = signature;
+        }
+  
+        if (signature.params[index] != undefined) {
+          filtered.push(signature);
+        }
+      }
+  
+      // sort the filtered signatures by param
+      filtered.sort(function(a, b) {
+        return __WEBPACK_IMPORTED_MODULE_1__param__["a" /* Param */].compare(a.params[index], b.params[index], typed);
+      });
+  
+      // recurse over the signatures
+      var entries = [];
+      for (i = 0; i < filtered.length; i++) {
+        signature = filtered[i];
+        // group signatures with the same param at current index
+        var param = signature.params[index];
+  
+        // TODO: replace the next filter loop
+        var existing = entries.filter(function(entry) {
+          return entry.param.overlapping(param);
+        })[0];
+  
+        //var existing;
+        //for (var j = 0; j < entries.length; j++) {
+        //  if (entries[j].param.overlapping(param)) {
+        //    existing = entries[j];
+        //    break;
+        //  }
+        //}
+  
+        if (existing) {
+          if (existing.param.varArgs) {
+            throw new Error(
+              'Conflicting types "' + existing.param + '" and "' + param + '"'
+            );
+          }
+          existing.signatures.push(signature);
+        } else {
+          entries.push({
+            param: param,
+            signatures: [signature]
+          });
+        }
+      }
+  
+      // find all any type signature that can still match our current path
+      var matchingAnys = [];
+      for (i = 0; i < anys.length; i++) {
+        if (anys[i].paramsStartWith(path)) {
+          matchingAnys.push(anys[i]);
+        }
+      }
+  
+      // see if there are any type signatures that don't match any of the
+      // signatures that we have in our tree, i.e. we have alternative
+      // matching signature(s) outside of our current tree and we should
+      // fall through to them instead of throwing an exception
+      var fallThrough = false;
+      for (i = 0; i < matchingAnys.length; i++) {
+        if (!Object(__WEBPACK_IMPORTED_MODULE_4__utils__["a" /* contains */])(signatures, matchingAnys[i])) {
+          fallThrough = true;
+          break;
+        }
+      }
+  
+      // parse the childs
+      var childs = new Array(entries.length);
+      for (i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        childs[i] = parseTree(
+          entry.signatures,
+          path.concat(entry.param),
+          matchingAnys
+        );
+      }
+  
+      const node = new __WEBPACK_IMPORTED_MODULE_3__node__["a" /* Node */](typed.types, path, nodeSignature, childs, fallThrough);
+  
+      return node;
+    }
+  
+    /**
+       * Generate an array like ['arg0', 'arg1', 'arg2']
+       * @param {number} count Number of arguments to generate
+       * @returns {Array} Returns an array with argument names
+       */
+    function getArgs(count) {
+      // create an array with all argument names
+      var args = [];
+      for (var i = 0; i < count; i++) {
+        args[i] = 'arg' + i;
+      }
+  
+      return args;
+    }
+  
+    /**
+       * Compose a function from sub-functions each handling a single type signature.
+       * Signatures:
+       *   typed(signature: string, fn: function)
+       *   typed(name: string, signature: string, fn: function)
+       *   typed(signatures: Object.<string, function>)
+       *   typed(name: string, signatures: Object.<string, function>)
+       *
+       * @param {string | null} name
+       * @param {Object.<string, Function>} signatures
+       * @return {Function} Returns the typed function
+       * @private
+       */
+    function _typed(name, signatures) {
+      var refs = new __WEBPACK_IMPORTED_MODULE_0__refs__["a" /* Refs */]();
+  
+      // parse signatures, expand them
+      var _signatures = parseSignatures(signatures);
+      if (_signatures.length == 0) {
+        throw new Error('No signatures provided');
+      }
+  
+      // filter all any type signatures
+      var anys = filterAnyTypeSignatures(_signatures);
+  
+      // parse signatures into a node tree
+      var node = parseTree(_signatures, [], anys);
+  
+      //var util = require('util');
+      //console.log('ROOT');
+      //console.log(util.inspect(node, { depth: null }));
+  
+      // generate code for the typed function
+      var code = [];
+      var _name = name || '';
+      var _args = getArgs(maxParams(_signatures));
+      code.push('function ' + _name + '(' + _args.join(', ') + ') {');
+      code.push('  "use strict";');
+      code.push("  var name = '" + _name + "';");
+      code.push(node.toCode(refs, '  ', typed));
+      code.push('}');
+  
+      // generate body for the factory function
+      var body = [refs.toCode(), 'return ' + code.join('\n')].join('\n');
+  
+      // evaluate the JavaScript code and attach function references
+      var factory = new Function(refs.name, 'createError', body);
+      var fn = factory(refs, createError);
+  
+      //console.log('FN\n' + fn.toString()); // TODO: cleanup
+  
+      // attach the signatures with sub-functions to the constructed function
+      fn.signatures = mapSignatures(_signatures);
+  
+      return fn;
+    }
+  
+    /**
+       * Calculate the maximum number of parameters in givens signatures
+       * @param {Signature[]} signatures
+       * @returns {number} The maximum number of parameters
+       */
+    function maxParams(signatures) {
+      var max = 0;
+  
+      for (var i = 0; i < signatures.length; i++) {
+        var len = signatures[i].params.length;
+        if (len > max) {
+          max = len;
+        }
+      }
+  
+      return max;
+    }
+  
+    /**
+       * Get the type of a value
+       * @param {*} x
+       * @returns {string} Returns a string with the type of value
+       */
+    function getTypeOf(x) {
+      var obj;
+  
+      for (var i = 0; i < typed.types.length; i++) {
+        var entry = typed.types[i];
+  
+        if (entry.name === 'Object') {
+          // Array and Date are also Object, so test for Object afterwards
+          obj = entry;
+        } else {
+          if (entry.test(x)) return entry.name;
+        }
+      }
+  
+      // at last, test whether an object
+      if (obj && obj.test(x)) return obj.name;
+  
+      return 'unknown';
+    }
+
+    
   /**
      * Find a specific signature from a (composed) typed function, for
      * example:
@@ -1038,58 +1077,11 @@ function create() {
 
     throw new Error('Cannot convert from ' + from + ' to ' + type);
   }
-
-  // attach types and conversions to the final `typed` function
-  typed.config = config;
-  typed.types = types;
-  typed.conversions = conversions;
-  typed.ignore = ignore;
-  typed.create = create;
-  typed.find = find;
-  typed.convert = convert;
-
-  // add a type
-  typed.addType = function(type) {
-    if (
-      !type ||
-      typeof type.name !== 'string' ||
-      typeof type.test !== 'function'
-    ) {
-      throw new TypeError(
-        'Object with properties {name: string, test: function} expected'
-      );
-    }
-
-    typed.types.push(type);
-  };
-
-  // add a conversion
-  typed.addConversion = function(conversion) {
-    if (
-      !conversion ||
-      typeof conversion.from !== 'string' ||
-      typeof conversion.to !== 'string' ||
-      typeof conversion.convert !== 'function'
-    ) {
-      throw new TypeError(
-        'Object with properties {from: string, to: string, convert: function} expected'
-      );
-    }
-
-    typed.conversions.push(conversion);
-  };
-
-  return typed;
 }
-
-const typed = create();
-/* harmony export (immutable) */ __webpack_exports__["typed"] = typed;
-
-
 
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1150,7 +1142,7 @@ Refs.prototype.toCode = function() {
 
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1162,13 +1154,16 @@ Refs.prototype.toCode = function() {
 
 /**
      * A function signature
+     * @param {typed} fn       The typed function
      * @param {string | string[] | Param[]} params
      *                         Array with the type(s) of each parameter,
      *                         or a comma separated string with types
      * @param {Function} fn    The actual function
      * @constructor
      */
-function Signature(params, fn) {
+function Signature(typed, params, fn) {
+  this.typed = typed;
+
   var _params;
   if (typeof params === 'string') {
     _params = params !== '' ? params.split(',') : [];
@@ -1206,7 +1201,7 @@ function Signature(params, fn) {
      * @returns {Signature} Returns a cloned version of this signature
      */
 Signature.prototype.clone = function() {
-  return new Signature(this.params.slice(), this.fn);
+  return new Signature(typed, this.params.slice(), this.fn);
 };
 
 /**
@@ -1262,7 +1257,7 @@ Signature.prototype.expand = function() {
         }
       }
     } else {
-      signatures.push(new Signature(path, signature.fn));
+      signatures.push(new Signature(typed, path, signature.fn));
     }
   }
 
@@ -1355,8 +1350,8 @@ Signature.prototype.paramsStartWith = function(params) {
     return true;
   }
 
-  var aLast = Object(__WEBPACK_IMPORTED_MODULE_1__utils__["c" /* last */])(this.params);
-  var bLast = Object(__WEBPACK_IMPORTED_MODULE_1__utils__["c" /* last */])(params);
+  var aLast = Object(__WEBPACK_IMPORTED_MODULE_1__utils__["b" /* last */])(this.params);
+  var bLast = Object(__WEBPACK_IMPORTED_MODULE_1__utils__["b" /* last */])(params);
 
   for (var i = 0; i < params.length; i++) {
     var a = this.params[i] || (aLast.varArgs ? aLast : null);
@@ -1418,15 +1413,12 @@ Signature.prototype.toString = function() {
 
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (immutable) */ __webpack_exports__["a"] = Node;
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__utils__ = __webpack_require__(0);
-
-  
-  /**
+/**
      * A group of signatures with the same parameter on given index
      * @param {Param[]} path
      * @param {Signature} [signature]
@@ -1434,7 +1426,8 @@ Signature.prototype.toString = function() {
      * @param {boolean} [fallThrough=false]
      * @constructor
      */
-function Node(path, signature, childs, fallThrough) {
+function Node(types, path, signature, childs, fallThrough) {
+  this.types = types;
   this.path = path || [];
   this.param = path[path.length - 1] || null;
   this.signature = signature || null;
@@ -1448,8 +1441,8 @@ function Node(path, signature, childs, fallThrough) {
      * @param {string} prefix
      * @returns {string} Returns the code as string
      */
-Node.prototype.toCode = function(refs, prefix) {
-  var typed = this.typed;
+Node.prototype.toCode = function(refs, prefix, typed) {
+  var self = this;
 
   // TODO: split this function in multiple functions, it's too large
   var code = [];
@@ -1482,7 +1475,7 @@ Node.prototype.toCode = function(refs, prefix) {
           var tests = [];
           for (var i = 0; i < types.length; i++) {
             tests[i] =
-              refs.add(Object(__WEBPACK_IMPORTED_MODULE_0__utils__["b" /* getTypeTest */])(types[i], typed), 'test') + '(' + arg + ')';
+              refs.add(self.getTypeTest(types[i]), 'test') + '(' + arg + ')';
           }
           return tests.join(' || ');
         }.bind(this);
@@ -1513,7 +1506,7 @@ Node.prototype.toCode = function(refs, prefix) {
         for (var i = 0; i < allTypes.length; i++) {
           var conversion_i = this.param.conversions[i];
           if (conversion_i) {
-            var test = refs.add(Object(__WEBPACK_IMPORTED_MODULE_0__utils__["b" /* getTypeTest */])(allTypes[i], typed), 'test');
+            var test = refs.add(self.getTypeTest(allTypes[i]), 'test');
             var convert = refs.add(conversion_i.convert, 'convert');
             code.push(prefix + '    }');
             code.push(prefix + '    else if (' + test + '(arguments[i])) {');
@@ -1542,7 +1535,8 @@ Node.prototype.toCode = function(refs, prefix) {
       } else {
         // regular type
         var type = this.param.types[0];
-        var test = type !== 'any' ? refs.add(Object(__WEBPACK_IMPORTED_MODULE_0__utils__["b" /* getTypeTest */])(type, typed), 'test') : null;
+        var test =
+          type !== 'any' ? refs.add(self.getTypeTest(type), 'test') : null;
 
         code.push(prefix + 'if (' + test + '(arg' + index + ')) { ' + comment);
         code.push(this._innerCode(refs, prefix + '  '));
@@ -1555,6 +1549,44 @@ Node.prototype.toCode = function(refs, prefix) {
   }
 
   return code.join('\n');
+};
+
+/**
+     * Get a type test function for a specific data type
+     * @param {string} name                   Name of a data type like 'number' or 'string'
+     * @returns {Function(obj: *) : boolean}  Returns a type testing function.
+     *                                        Throws an error for an unknown type.
+     */
+Node.prototype.getTypeTest = function getTypeTest(name) {
+  var types = this.types;
+
+  var test;
+  for (var i = 0; i < types.length; i++) {
+    var entry = types[i];
+    if (entry.name === name) {
+      test = entry.test;
+      break;
+    }
+  }
+
+  if (!test) {
+    var hint;
+    for (i = 0; i < types.length; i++) {
+      entry = types[i];
+      if (entry.name.toLowerCase() == name.toLowerCase()) {
+        hint = entry.name;
+        break;
+      }
+    }
+
+    throw new Error(
+      'Unknown type "' +
+        name +
+        '"' +
+        (hint ? '. Did you mean "' + hint + '"?' : '')
+    );
+  }
+  return test;
 };
 
 /**

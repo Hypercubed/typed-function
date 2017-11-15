@@ -3,13 +3,16 @@ import { contains, last } from './utils';
 
 /**
      * A function signature
+     * @param {typed} fn       The typed function
      * @param {string | string[] | Param[]} params
      *                         Array with the type(s) of each parameter,
      *                         or a comma separated string with types
      * @param {Function} fn    The actual function
      * @constructor
      */
-export function Signature(params, fn) {
+export function Signature(typed, params, fn) {
+  this.typed = typed;
+
   var _params;
   if (typeof params === 'string') {
     _params = params !== '' ? params.split(',') : [];
@@ -47,7 +50,7 @@ export function Signature(params, fn) {
      * @returns {Signature} Returns a cloned version of this signature
      */
 Signature.prototype.clone = function() {
-  return new Signature(this.params.slice(), this.fn);
+  return new Signature(typed, this.params.slice(), this.fn);
 };
 
 /**
@@ -103,7 +106,7 @@ Signature.prototype.expand = function() {
         }
       }
     } else {
-      signatures.push(new Signature(path, signature.fn));
+      signatures.push(new Signature(typed, path, signature.fn));
     }
   }
 

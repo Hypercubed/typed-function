@@ -4,7 +4,8 @@
   "description": "Type checking for JavaScript functions",
   "author": "Jos de Jong <wjosdejong@gmail.com> (https://github.com/josdejong)",
   "contributors": [
-    "Luke Gumbley (https://github.com/luke-gumbley)"
+    "Luke Gumbley (https://github.com/luke-gumbley)",
+    "Jayson Harshbarger (https://github.com/hypercubed)"
   ],
   "homepage": "https://github.com/josdejong/typed-function",
   "repository": {
@@ -27,7 +28,7 @@
   },
   "main": "./typed-function",
   "scripts": {
-    "build": "webpack && npm run minify",
+    "build": "webpack && uglifyjs typed-function.js -o typed-function.min.js -c -m",
     "webpack": "webpack",
     "minify": "uglifyjs typed-function.js -o typed-function.min.js -c -m",
     "mocha": "mocha test --recursive",

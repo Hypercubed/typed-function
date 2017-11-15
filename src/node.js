@@ -1,6 +1,4 @@
-import { getTypeTest } from './utils';
-  
-  /**
+/**
      * A group of signatures with the same parameter on given index
      * @param {Param[]} path
      * @param {Signature} [signature]
@@ -8,7 +6,8 @@ import { getTypeTest } from './utils';
      * @param {boolean} [fallThrough=false]
      * @constructor
      */
-export function Node(path, signature, childs, fallThrough) {
+export function Node(types, path, signature, childs, fallThrough) {
+  this.types = types;
   this.path = path || [];
   this.param = path[path.length - 1] || null;
   this.signature = signature || null;
@@ -22,8 +21,8 @@ export function Node(path, signature, childs, fallThrough) {
      * @param {string} prefix
      * @returns {string} Returns the code as string
      */
-Node.prototype.toCode = function(refs, prefix) {
-  var typed = this.typed;
+Node.prototype.toCode = function(refs, prefix, typed) {
+  var self = this;
 
   // TODO: split this function in multiple functions, it's too large
   var code = [];
@@ -56,7 +55,7 @@ Node.prototype.toCode = function(refs, prefix) {
           var tests = [];
           for (var i = 0; i < types.length; i++) {
             tests[i] =
-              refs.add(getTypeTest(types[i], typed), 'test') + '(' + arg + ')';
+              refs.add(self.getTypeTest(types[i]), 'test') + '(' + arg + ')';
           }
           return tests.join(' || ');
         }.bind(this);
@@ -87,7 +86,7 @@ Node.prototype.toCode = function(refs, prefix) {
         for (var i = 0; i < allTypes.length; i++) {
           var conversion_i = this.param.conversions[i];
           if (conversion_i) {
-            var test = refs.add(getTypeTest(allTypes[i], typed), 'test');
+            var test = refs.add(self.getTypeTest(allTypes[i]), 'test');
             var convert = refs.add(conversion_i.convert, 'convert');
             code.push(prefix + '    }');
             code.push(prefix + '    else if (' + test + '(arguments[i])) {');
@@ -116,7 +115,8 @@ Node.prototype.toCode = function(refs, prefix) {
       } else {
         // regular type
         var type = this.param.types[0];
-        var test = type !== 'any' ? refs.add(getTypeTest(type, typed), 'test') : null;
+        var test =
+          type !== 'any' ? refs.add(self.getTypeTest(type), 'test') : null;
 
         code.push(prefix + 'if (' + test + '(arg' + index + ')) { ' + comment);
         code.push(this._innerCode(refs, prefix + '  '));
@@ -129,6 +129,44 @@ Node.prototype.toCode = function(refs, prefix) {
   }
 
   return code.join('\n');
+};
+
+/**
+     * Get a type test function for a specific data type
+     * @param {string} name                   Name of a data type like 'number' or 'string'
+     * @returns {Function(obj: *) : boolean}  Returns a type testing function.
+     *                                        Throws an error for an unknown type.
+     */
+Node.prototype.getTypeTest = function getTypeTest(name) {
+  var types = this.types;
+
+  var test;
+  for (var i = 0; i < types.length; i++) {
+    var entry = types[i];
+    if (entry.name === name) {
+      test = entry.test;
+      break;
+    }
+  }
+
+  if (!test) {
+    var hint;
+    for (i = 0; i < types.length; i++) {
+      entry = types[i];
+      if (entry.name.toLowerCase() == name.toLowerCase()) {
+        hint = entry.name;
+        break;
+      }
+    }
+
+    throw new Error(
+      'Unknown type "' +
+        name +
+        '"' +
+        (hint ? '. Did you mean "' + hint + '"?' : '')
+    );
+  }
+  return test;
 };
 
 /**
